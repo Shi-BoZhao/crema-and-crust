@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crema &amp; Crust Diorama</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23f3e5c8'/%3E%3Ccircle cx='8' cy='8' r='5' fill='%23c96f3b'/%3E%3Ccircle cx='6' cy='7' r='1' fill='%23a33b2e'/%3E%3Ccircle cx='10' cy='9' r='1' fill='%23a33b2e'/%3E%3C/svg%3E"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #2b2620;
+        overflow: hidden;
+        font-family: 'Hiragino Maru Gothic ProN', 'BIZ UDGothic', 'Yu Gothic', sans-serif;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      #app canvas {
+        image-rendering: pixelated;
+        width: min(100vw, calc(100vh * 16 / 10));
+        height: min(100vh, calc(100vw * 10 / 16));
+      }
+      #hud {
+        position: fixed;
+        left: 50%;
+        bottom: 4vh;
+        transform: translateX(-50%);
+        padding: 8px 18px;
+        border-radius: 999px;
+        background: rgba(43, 33, 24, 0.82);
+        border: 1px solid rgba(243, 229, 200, 0.25);
+        color: #f3e5c8;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        max-width: 80vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: none;
+        transition: opacity 0.6s ease;
+      }
+      #hud .detail {
+        opacity: 0.65;
+        font-size: 12px;
+        margin-left: 10px;
+      }
+      #demo-badge {
+        position: fixed;
+        top: 12px;
+        right: 14px;
+        color: rgba(243, 229, 200, 0.45);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud"></div>
+    <div id="demo-badge" hidden>demo</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
