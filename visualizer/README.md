@@ -287,6 +287,11 @@ curl -sS -w "\nHTTP %{http_code}\n" \
 
 `-s` だけだとエラーが見えません。**`-sS`** か **`-v`** を付けてください。
 
+Mac では vite が IPv6 の `localhost` だけで待ち受けることがあり、
+`127.0.0.1` への curl や ngrok が `Connection refused` になることがあります。
+`curl http://localhost:5199/api/state` を試すか、`vite.config.ts` の
+`host: '127.0.0.1'` 修正を pull して visualizer を再起動してください。
+
 ### 3. ngrok 単体で試す
 
 `npm run up` を止めて:
