@@ -126,9 +126,11 @@ const vite = spawn('npx', ['vite'], {
 });
 children.push(vite);
 vite.stdout.on('data', (chunk) => {
-  if (/Local:/.test(chunk.toString())) console.log('  店: http://localhost:5199/?demo=0');
+  const text = chunk.toString();
+  process.stdout.write(text);
+  if (/Local:/.test(text)) console.log('  店: http://localhost:5199/?demo=0');
 });
-vite.stderr.on('data', () => {});
+vite.stderr.on('data', (chunk) => process.stderr.write(chunk));
 vite.on('exit', (code) => {
   console.error(`vite が終了しました (exit ${code})`);
   if (code !== 0) {
@@ -147,8 +149,13 @@ if (tunnelCommand) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   children.push(tunnel);
+  tunnel.stdout.on('data', (chunk) => process.stderr.write(chunk));
+  tunnel.stderr.on('data', (chunk) => process.stderr.write(chunk));
   tunnel.on('exit', (code) => {
-    console.error(`トンネルが終了しました (exit ${code})`);
+    if (code !== 0) {
+      console.error(`\nトンネルが終了しました (exit ${code})。上の ngrok/cloudflared のエラーを確認してください。`);
+      console.error('  ローカルだけ動いていても、Cloud Agent からは届きません。\n');
+    }
   });
   printSecrets(publicUrl ?? '(publicUrl 未設定: .diorama.config.json に追記してください)', {
     fixed: Boolean(publicUrl),

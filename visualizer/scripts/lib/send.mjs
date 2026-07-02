@@ -48,6 +48,9 @@ export async function sendEvent({
 
   const base = resolveBaseUrl();
   const headers = { 'Content-Type': 'application/json' };
+  if (/ngrok/i.test(base)) {
+    headers['ngrok-skip-browser-warning'] = '1';
+  }
   if (process.env.DIORAMA_TOKEN) {
     headers.Authorization = `Bearer ${process.env.DIORAMA_TOKEN}`;
   }

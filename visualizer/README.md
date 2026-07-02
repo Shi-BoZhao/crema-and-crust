@@ -255,6 +255,56 @@ Secrets 不要です。`npm run dev` だけ起動していれば、
 cd visualizer && npm run hook-test
 ```
 
+## つながらないとき
+
+**ブラウザでジオラマが見えても、Cloud Agent から動かない**ことがあります。
+`npm run up` は **localhost** を自動で開くので、ngrok が死んでいても店内だけは表示されます。
+
+### 1. まず localhost を確認(Mac のターミナル.app)
+
+```bash
+curl -sS http://127.0.0.1:5199/api/state
+```
+
+- JSON が返る → visualizer は動いている
+- `Connection refused` → `npm run up` が止まっている、またはポート競合
+
+### 2. 次に ngrok URL を確認
+
+```bash
+TOKEN=$(tr -d '\n' < visualizer/.diorama-token)
+curl -sS -w "\nHTTP %{http_code}\n" \
+  -H "ngrok-skip-browser-warning: 1" \
+  -H "Authorization: Bearer $TOKEN" \
+  -X POST "https://あなたの.ngrok-free.app/api/event" \
+  -H "Content-Type: application/json" \
+  -d '{"state":"reading","detail":"手動テスト","agent":"manual"}'
+```
+
+- `{"ok":true,...}` + `HTTP 200` → トンネル OK。Secrets の名前・値を再確認し、**Cloud Agent を新規セッション**で
+- 何も出ず即終了 → **ngrok が動いていない**可能性大。`npm run up` のターミナルに ngrok のエラーが出ていないか見る
+- `HTTP 401` → `DIORAMA_TOKEN` が Mac の `.diorama-token` と不一致
+
+`-s` だけだとエラーが見えません。**`-sS`** か **`-v`** を付けてください。
+
+Mac では vite が IPv6 の `localhost` だけで待ち受けることがあり、
+`127.0.0.1` への curl や ngrok が `Connection refused` になることがあります。
+`curl http://localhost:5199/api/state` を試すか、`vite.config.ts` の
+`host: '127.0.0.1'` 修正を pull して visualizer を再起動してください。
+
+### 3. ngrok 単体で試す
+
+`npm run up` を止めて:
+
+```bash
+cd visualizer
+npx vite   # 別ターミナル。5199 で visualizer を起動
+ngrok http --domain=あなたの.ngrok-free.app 5199
+```
+
+ngrok の画面に `ERR` や `failed to start tunnel` が出たら、
+authtoken・固定ドメイン名・`.diorama.config.json` の typo を疑ってください。
+
 ## 他のリポジトリでも使う
 
 自動連携はこのリポジトリ専用ではありません。
