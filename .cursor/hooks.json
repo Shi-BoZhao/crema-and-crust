@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeReadFile": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5,
+        "matcher": "npm|npx|pnpm|yarn|vitest|eslint|tsc|git"
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ],
+    "subagentStart": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/diorama.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

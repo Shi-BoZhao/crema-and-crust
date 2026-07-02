@@ -97,24 +97,45 @@ Content-Type: application/json
    hooks(ツール実行前後のシェルフック)から curl を叩けば半自動になる
 2. **ラッパー連携**: テスト・ビルドを `send-event testing` → 実行 → `done|error` で包む
    `scripts/wrap.mjs` を用意済み
-3. **Cloud Agent(対応済み)**: ローカルの visualizer をトンネル
-   (cloudflared / ngrok / `ssh -R`)で公開し、Cloud 側に `DIORAMA_URL` と
-   `DIORAMA_TOKEN` を Secrets で渡す。送信スクリプトはローカルと同じものが動く
+3. **Cloud Agent 自動連携(対応済み)**: `.cursor/hooks.json` が Cloud Agent の
+   ファイル読取・編集・シェル・サブエージェントを検知し、自動で POST する。
+   初回だけ手元で visualizer + トンネルを起動し、Cursor Secrets に
+   `DIORAMA_URL` / `DIORAMA_TOKEN` / `DIORAMA_AGENT` を設定する
 4. **将来**: ファイル変更監視(chokidar)や MCP サーバー化。イベント仕様は同じまま
    送信側を差し替えるだけでよい設計にしてある
 
-### Cloud Agent 連携の構成
+### Cloud Agent 自動連携の構成
 
 ```
 Cloud Agent VM                          あなたの PC
 ──────────────                          ─────────────────────────
-send-event.mjs / curl                    cloudflared 等のトンネル
-  DIORAMA_URL=https://xxx... ──POST──▶     └─▶ visualizer (localhost:5199)
-  DIORAMA_TOKEN=合言葉                          └─▶ ブラウザの店内に反映
-  DIORAMA_AGENT=cloud-1
+.cursor/hooks.json が起動
+  ↓ ファイル読取/編集/シェル/サブエージェント
+hook-bridge.mjs ──POST──▶ DIORAMA_URL ──▶ cloudflared 等
+  (Secrets: URL/TOKEN/AGENT)                  └─▶ visualizer (localhost:5199)
+                                                    └─▶ ブラウザの店内
 ```
 
-トークンは書き込み(/api/event)だけを守る。眺める側(ページ・SSE)は自由。
+**初回設定(3ステップ)**
+
+1. 手元: `DIORAMA_TOKEN=... npm run dev` + `cloudflared tunnel --url http://localhost:5199`
+2. Cursor Dashboard → Cloud Agent Secrets: `DIORAMA_URL`, `DIORAMA_TOKEN`, `DIORAMA_AGENT`
+3. ブラウザ: `http://localhost:5199/?demo=0`
+
+以後、Cloud Agent セッションごとに手動送信は不要。`DIORAMA_AUTO=0` で無効化可能。
+
+| Hook イベント | ジオラマ状態 |
+|---|---|
+| `beforeReadFile` | `reading` |
+| `afterFileEdit` | `coding` |
+| `beforeShellExecution` (test/build) | `testing` |
+| `afterShellExecution` (test/build) | `done` / `error` |
+| `postToolUseFailure` | `error` |
+| `subagentStart` | `thinking` (agent=`sub-<type>`) |
+| `subagentStop` | `done` / `error` / `idle` |
+
+Cloud Agent 未対応の hook (`sessionStart`, `stop` など) は使わない。
+ローカル IDE Agent でも同じ hooks が localhost:5199 に送る (`npm run hook-test` で確認)。
 
 ## 拡張の指針
 
