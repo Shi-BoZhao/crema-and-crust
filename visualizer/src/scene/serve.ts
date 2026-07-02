@@ -59,4 +59,10 @@ export class ServeItems {
     this.pizza.visible = false;
     this.coffee.visible = false;
   }
+
+  /** 店員が退店するときに、置き物ごとシーンから外す。 */
+  detach(parent: THREE.Object3D): void {
+    parent.remove(this.pizza);
+    parent.remove(this.coffee);
+  }
 }

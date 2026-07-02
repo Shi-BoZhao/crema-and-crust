@@ -4,6 +4,30 @@ import { PALETTE as P } from '../scene/palette';
 
 export type EmoteKind = 'dots' | 'question' | 'note' | 'none';
 
+export interface BaristaLook {
+  apron: string;
+  hair: string;
+}
+
+/** 店員の見た目バリエーション。agent 識別子から決定的に選ぶ。 */
+export const BARISTA_LOOKS: BaristaLook[] = [
+  { apron: P.apron, hair: P.hair }, // 深緑エプロン(店主)
+  { apron: '#a3543a', hair: '#2f2620' }, // テラコッタ
+  { apron: '#5a6b8c', hair: '#6e4526' }, // ブルーグレー
+  { apron: '#8c6d3f', hair: '#3a2c20' }, // マスタード
+  { apron: '#6b4f7a', hair: '#4a3526' }, // プラム
+];
+
+export function lookForAgent(agent: string): BaristaLook {
+  if (agent === 'main' || agent === 'demo') return BARISTA_LOOKS[0];
+  let hash = 0;
+  for (let i = 0; i < agent.length; i++) {
+    hash = (hash * 31 + agent.charCodeAt(i)) >>> 0;
+  }
+  // 店主の見た目(0番)は仲間には使わない
+  return BARISTA_LOOKS[1 + (hash % (BARISTA_LOOKS.length - 1))];
+}
+
 /**
  * ボクセル風の店員さん。
  * 体のパーツ(腕・脚・頭)を別グループにして、状態アニメから直接触れるようにする。
@@ -32,7 +56,11 @@ export class Barista {
   private walkPhase = 0;
   readonly walking = { active: false };
 
-  constructor(parent: THREE.Object3D) {
+  /** HUD の色付きドットなどに使う */
+  readonly look: BaristaLook;
+
+  constructor(parent: THREE.Object3D, look: BaristaLook = BARISTA_LOOKS[0]) {
+    this.look = look;
     // 脚
     for (const [legGroup, side] of [
       [this.legLeft, -1],
@@ -46,9 +74,9 @@ export class Barista {
 
     // 胴 + エプロン
     this.body = at(box(0.62, 0.72, 0.36, P.shirt), 0, 0.9, 0);
-    const apron = at(box(0.5, 0.6, 0.06, P.apron), 0, -0.04, 0.19);
+    const apron = at(box(0.5, 0.6, 0.06, look.apron), 0, -0.04, 0.19);
     this.body.add(apron);
-    const apronStrap = at(box(0.14, 0.2, 0.05, P.apron), 0, 0.32, 0.19);
+    const apronStrap = at(box(0.14, 0.2, 0.05, look.apron), 0, 0.32, 0.19);
     this.body.add(apronStrap);
     this.group.add(this.body);
 
@@ -67,8 +95,8 @@ export class Barista {
     this.head.position.set(0, 1.32, 0);
     const face = at(box(0.5, 0.48, 0.46, P.skin), 0, 0.24, 0);
     this.head.add(face);
-    this.head.add(at(box(0.54, 0.18, 0.5, P.hair), 0, 0.5, -0.01)); // 髪
-    this.head.add(at(box(0.52, 0.3, 0.12, P.hair), 0, 0.32, -0.22)); // 後ろ髪
+    this.head.add(at(box(0.54, 0.18, 0.5, look.hair), 0, 0.5, -0.01)); // 髪
+    this.head.add(at(box(0.52, 0.3, 0.12, look.hair), 0, 0.32, -0.22)); // 後ろ髪
     for (const side of [-1, 1]) {
       const eye = at(box(0.06, 0.09, 0.02, '#3a2c20'), side * 0.12, 0.26, 0.24);
       this.head.add(eye);

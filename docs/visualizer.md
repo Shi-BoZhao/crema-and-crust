@@ -36,6 +36,7 @@ Cursor hooks / 手動 ──POST──▶       ├─ events-plugin (POST /api/
                                     └─ フロント (Three.js)
                                          ├─ events/client   SSE購読・デモ進行
                                          ├─ director        状態 → 持ち場・アニメの割当
+                                         ├─ crew            agent ごとの店員管理(入店・退店)
                                          ├─ barista/        ボクセル店員と状態別アニメ
                                          ├─ scene/          店内ジオラマ・小物・パーティクル
                                          └─ core/           低解像度レンダリング(ドット絵化)
@@ -56,16 +57,32 @@ Cursor hooks / 手動 ──POST──▶       ├─ events-plugin (POST /api/
 ```
 POST http://localhost:5199/api/event
 Content-Type: application/json
-{ "state": "coding", "detail": "src/game/pizza.ts を編集中" }
+{ "state": "coding", "detail": "src/game/pizza.ts を編集中", "agent": "cloud-1" }
 ```
 
 - `state` は `idle | thinking | reading | coding | testing | error | done` のいずれか(必須)
 - `detail` は自由文(任意)。HUD に表示されるだけで挙動には影響しない
-- 手動確認用に `GET /api/event?state=coding&detail=...` も受ける
-- `GET /api/state` で最後のイベントを返す(ページ再読込時の同期用)
-- `GET /api/events` が SSE。接続時に最後のイベントを即時送信
+- `agent` は送信元の識別子(任意、既定 `main`)。英数と `-` `_` 以外は正規化される。
+  仕様は `src/protocol.ts` にあり、サーバーとフロントで共有する
+- 手動確認用に `GET /api/event?state=coding&detail=...&agent=...` も受ける
+- `GET /api/state` で全 agent の最後のイベントを返す(ページ再読込時の同期用)
+- `GET /api/events` が SSE。接続時に各 agent の最後のイベントを即時送信
+- サーバー側で環境変数 `DIORAMA_TOKEN` を設定すると、送信に
+  `Authorization: Bearer <token>` が必要になる(トンネル公開時の合言葉)
 
-送信を楽にする CLI を同梱: `node visualizer/scripts/send-event.mjs coding "生地をのばす"`
+送信を楽にする CLI を同梱: `node visualizer/scripts/send-event.mjs coding "生地をのばす"`。
+`DIORAMA_URL`(送信先)・`DIORAMA_AGENT`(識別子)・`DIORAMA_TOKEN` の
+環境変数で、リモートからの送信にも同じスクリプトを使える。
+
+### マルチエージェント
+
+- agent ごとに店員が1人ずつ。新しい agent の最初のイベントで**入口から歩いて入店**する
+- 同じ持ち場に複数人が来たら、`director.ts` の `laneOffset` で左右に並ぶ
+- エプロン・髪の色は agent 識別子のハッシュで決まる(`barista/barista.ts` の `BARISTA_LOOKS`)。
+  店主の深緑エプロンは `main` / `demo` 専用
+- HUD は1人1行。色付きドットがエプロン色と対応する
+- 15分イベントが来ない店員は入口へ歩いて退店する(サーバー側も30分で忘れる)
+- デモの店主は、実イベントが届いた時点で退店して本物と入れ替わる
 
 ### デモモード
 
@@ -76,16 +93,32 @@ Content-Type: application/json
 
 ## Cursor 連携の現実的な段階
 
-1. **手動/半自動(MVP・現状)**: curl や CLI で送る。Cursor / Claude Code の
+1. **手動/半自動(MVP)**: curl や CLI で送る。Cursor / Claude Code の
    hooks(ツール実行前後のシェルフック)から curl を叩けば半自動になる
 2. **ラッパー連携**: テスト・ビルドを `send-event testing` → 実行 → `done|error` で包む
-   npm script を用意する
-3. **将来**: ファイル変更監視(chokidar)や MCP サーバー化。イベント仕様は同じまま
+   `scripts/wrap.mjs` を用意済み
+3. **Cloud Agent(対応済み)**: ローカルの visualizer をトンネル
+   (cloudflared / ngrok / `ssh -R`)で公開し、Cloud 側に `DIORAMA_URL` と
+   `DIORAMA_TOKEN` を Secrets で渡す。送信スクリプトはローカルと同じものが動く
+4. **将来**: ファイル変更監視(chokidar)や MCP サーバー化。イベント仕様は同じまま
    送信側を差し替えるだけでよい設計にしてある
+
+### Cloud Agent 連携の構成
+
+```
+Cloud Agent VM                          あなたの PC
+──────────────                          ─────────────────────────
+send-event.mjs / curl                    cloudflared 等のトンネル
+  DIORAMA_URL=https://xxx... ──POST──▶     └─▶ visualizer (localhost:5199)
+  DIORAMA_TOKEN=合言葉                          └─▶ ブラウザの店内に反映
+  DIORAMA_AGENT=cloud-1
+```
+
+トークンは書き込み(/api/event)だけを守る。眺める側(ページ・SSE)は自由。
 
 ## 拡張の指針
 
-- 状態を増やす: `types.ts` の `AGENT_STATES` に追加 → `director.ts` に持ち場と
+- 状態を増やす: `protocol.ts` の `AGENT_STATES` に追加 → `director.ts` に持ち場と
   アニメを1エントリ追加するだけ。描画・通信は触らなくてよい
-- 演出を増やす: `scene/props.ts`(小物)と `barista/animations.ts`(動き)に閉じる
-- 複数エージェント対応(将来): イベントに `agent` フィールドを足し、店員を増やす
+- 演出を増やす: `scene/shop.ts`(小物)と `barista/animations.ts`(動き)に閉じる
+- 店員の見た目を増やす: `barista/barista.ts` の `BARISTA_LOOKS` に色の組を足す

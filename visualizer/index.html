@@ -33,7 +33,16 @@
         left: 50%;
         bottom: 4vh;
         transform: translateX(-50%);
-        padding: 8px 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        pointer-events: none;
+      }
+      #hud .hud-row {
+        display: flex;
+        align-items: center;
+        padding: 7px 16px;
         border-radius: 999px;
         background: rgba(43, 33, 24, 0.82);
         border: 1px solid rgba(243, 229, 200, 0.25);
@@ -44,8 +53,18 @@
         max-width: 80vw;
         overflow: hidden;
         text-overflow: ellipsis;
-        pointer-events: none;
-        transition: opacity 0.6s ease;
+      }
+      #hud .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 8px;
+        flex-shrink: 0;
+      }
+      #hud .name {
+        opacity: 0.8;
+        font-size: 12px;
+        margin-right: 10px;
       }
       #hud .detail {
         opacity: 0.65;

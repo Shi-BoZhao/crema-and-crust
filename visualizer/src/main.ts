@@ -1,76 +1,78 @@
-import { applyStateAnimation, cleanupState, type AnimContext } from './barista/animations';
-import { Barista } from './barista/barista';
 import { createStage } from './core/renderer';
-import { STAGE_PLANS } from './director';
+import { Crew } from './crew';
 import { connectEvents } from './events/client';
 import { updateAmbient } from './scene/ambient';
 import { PuffEmitter } from './scene/particles';
 import { PALETTE } from './scene/palette';
-import { ServeItems } from './scene/serve';
 import { buildShop } from './scene/shop';
-import { STATE_LABELS, type AgentState } from './types';
+import { agentDisplayName, STATE_LABELS } from './types';
 
 const mount = document.getElementById('app')!;
 const hud = document.getElementById('hud')!;
 
 const stage = createStage(mount);
 const shop = buildShop(stage.scene);
-const barista = new Barista(stage.scene);
 const steam = new PuffEmitter(stage.scene, PALETTE.steam, 0.14);
 const smoke = new PuffEmitter(stage.scene, PALETTE.smoke, 0.2);
-const serveItems = new ServeItems(stage.scene, shop.counter.serveSpot);
+const crew = new Crew(stage.scene, shop);
 
-let currentState: AgentState = 'idle';
-let stateTime = 0;
-
-const initialPlan = STAGE_PLANS.idle.station!;
-barista.teleport(initialPlan.x, initialPlan.z, initialPlan.yaw);
-updateHud('idle');
-
-function updateHud(state: AgentState, detail?: string): void {
+function renderHud(): void {
   hud.innerHTML = '';
-  hud.append(STATE_LABELS[state]);
-  if (detail) {
-    const span = document.createElement('span');
-    span.className = 'detail';
-    span.textContent = detail;
-    hud.append(span);
+  const rows = crew.hudRows();
+  hud.toggleAttribute('hidden', rows.length === 0);
+  for (const row of rows) {
+    const div = document.createElement('div');
+    div.className = 'hud-row';
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = row.color;
+    div.append(dot);
+
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = agentDisplayName(row.agent);
+    div.append(name);
+
+    div.append(STATE_LABELS[row.state]);
+
+    if (row.detail) {
+      const span = document.createElement('span');
+      span.className = 'detail';
+      span.textContent = row.detail;
+      div.append(span);
+    }
+    hud.append(div);
   }
 }
 
-function enterState(state: AgentState, detail?: string): void {
-  if (state !== currentState) {
-    cleanupState(currentState, shop);
-    if (currentState === 'done') serveItems.hide();
-    currentState = state;
-    stateTime = 0;
-    const plan = STAGE_PLANS[state];
-    if (plan.station) {
-      barista.walkTo(plan.station.x, plan.station.z, plan.station.yaw);
-    }
-    if (state === 'done') serveItems.serve();
-  }
-  updateHud(state, detail);
-}
+renderHud();
 
 connectEvents({
-  onEvent(event) {
-    enterState(event.state, event.detail);
+  onEvent(event, source) {
+    // 実イベントが来たら、デモの店主にはそっと帰ってもらう
+    if (source === 'live' && crew.has('demo')) {
+      crew.depart('demo');
+    }
+    crew.handleEvent(event);
+    renderHud();
   },
 });
 
+let pruneTimer = 0;
+
 stage.start((dt, t) => {
-  stateTime += dt;
-  const walking = barista.update(dt);
-  if (!walking) {
-    barista.resetPose();
-    const ctx: AnimContext = { barista, shop, steam, smoke, stateTime, t, dt };
-    applyStateAnimation(currentState, ctx);
-    barista.setEmote(STAGE_PLANS[currentState].emote);
-  } else {
-    barista.setEmote('none');
+  const removed = crew.update(dt, t, steam, smoke);
+
+  pruneTimer += dt;
+  let pruned = false;
+  if (pruneTimer > 10) {
+    pruneTimer = 0;
+    pruned = crew.pruneInactive();
   }
-  updateAmbient(shop, steam, t, dt, currentState === 'testing' && !walking);
+  if (removed || pruned) renderHud();
+
+  updateAmbient(shop, steam, t, dt, crew.anyBaking());
   steam.update(dt);
   smoke.update(dt);
 });

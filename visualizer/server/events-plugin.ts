@@ -1,63 +1,87 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
+import {
+  isAgentState,
+  MAX_DETAIL_LENGTH,
+  sanitizeAgentId,
+  AGENT_STATES,
+  type AgentEvent,
+} from '../src/protocol';
 
-const VALID_STATES = new Set([
-  'idle',
-  'thinking',
-  'reading',
-  'coding',
-  'testing',
-  'error',
-  'done',
-]);
-
-interface StoredEvent {
-  state: string;
-  detail?: string;
-  at: number;
-}
+/** これより古い agent は「もう帰った」とみなして配信から外す */
+const AGENT_TTL_MS = 30 * 60_000;
 
 /**
  * 開発サーバーに同居するイベント受け口。
- *   POST /api/event   {"state":"coding","detail":"..."} を受け取る
- *   GET  /api/event?state=coding&detail=...  curl での手動確認用
- *   GET  /api/events  SSE。接続直後に最後のイベントを流す
- *   GET  /api/state   最後のイベントを JSON で返す
+ *   POST /api/event   {"state":"coding","detail":"...","agent":"cloud-1"} を受け取る
+ *   GET  /api/event?state=coding&detail=...&agent=...  curl での手動確認用
+ *   GET  /api/events  SSE。接続直後に各 agent の最後のイベントを流す
+ *   GET  /api/state   全 agent の最後のイベントを JSON で返す
+ *
+ * 環境変数 DIORAMA_TOKEN を設定すると、イベント送信に
+ * Authorization: Bearer <token>(または ?token= / body.token)が必要になる。
+ * トンネルでインターネットに公開するときに使う。
  */
 export function eventsPlugin(): Plugin {
-  let last: StoredEvent = { state: 'idle', at: Date.now() };
+  const agents = new Map<string, AgentEvent>();
   let received = false; // デモ抑止用: 実イベントが一度でも来たか
   const subscribers = new Set<ServerResponse>();
+  const token = process.env.DIORAMA_TOKEN;
 
-  function broadcast(event: StoredEvent) {
-    last = event;
+  function prune() {
+    const now = Date.now();
+    for (const [agent, event] of agents) {
+      if (now - event.at > AGENT_TTL_MS) agents.delete(agent);
+    }
+  }
+
+  function broadcast(event: AgentEvent) {
+    agents.set(event.agent, event);
+    prune();
     const payload = `data: ${JSON.stringify({ ...event, received })}\n\n`;
     for (const res of subscribers) {
       res.write(payload);
     }
   }
 
-  function acceptEvent(state: unknown, detail: unknown, res: ServerResponse) {
-    if (typeof state !== 'string' || !VALID_STATES.has(state)) {
-      res.statusCode = 400;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(
-        JSON.stringify({
-          ok: false,
-          error: `state must be one of: ${[...VALID_STATES].join(', ')}`,
-        }),
-      );
+  function json(res: ServerResponse, status: number, body: unknown) {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(body));
+  }
+
+  function authorized(req: IncomingMessage, params: Record<string, unknown>): boolean {
+    if (!token) return true;
+    const header = req.headers.authorization;
+    if (header === `Bearer ${token}`) return true;
+    return params.token === token;
+  }
+
+  function acceptEvent(
+    req: IncomingMessage,
+    params: Record<string, unknown>,
+    res: ServerResponse,
+  ) {
+    if (!authorized(req, params)) {
+      json(res, 401, { ok: false, error: 'token required' });
+      return;
+    }
+    const { state, detail, agent } = params;
+    if (!isAgentState(state)) {
+      json(res, 400, {
+        ok: false,
+        error: `state must be one of: ${AGENT_STATES.join(', ')}`,
+      });
       return;
     }
     received = true;
     broadcast({
+      agent: sanitizeAgentId(agent),
       state,
-      detail: typeof detail === 'string' ? detail.slice(0, 200) : undefined,
+      detail: typeof detail === 'string' ? detail.slice(0, MAX_DETAIL_LENGTH) : undefined,
       at: Date.now(),
     });
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ ok: true, state }));
+    json(res, 200, { ok: true, state, agent: sanitizeAgentId(agent) });
   }
 
   function readBody(req: IncomingMessage): Promise<string> {
@@ -77,6 +101,20 @@ export function eventsPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://localhost');
+        if (!url.pathname.startsWith('/api/')) {
+          next();
+          return;
+        }
+
+        // トンネル越し・別オリジンからの送信を許す
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        if (req.method === 'OPTIONS') {
+          res.statusCode = 204;
+          res.end();
+          return;
+        }
 
         if (url.pathname === '/api/event') {
           if (req.method === 'POST') {
@@ -88,26 +126,18 @@ export function eventsPlugin(): Plugin {
                 } catch {
                   /* 空のまま acceptEvent で 400 になる */
                 }
-                acceptEvent(parsed.state, parsed.detail, res);
+                acceptEvent(req, parsed, res);
               })
-              .catch(() => {
-                res.statusCode = 400;
-                res.end('{"ok":false}');
-              });
+              .catch(() => json(res, 400, { ok: false }));
           } else {
-            acceptEvent(
-              url.searchParams.get('state'),
-              url.searchParams.get('detail') ?? undefined,
-              res,
-            );
+            acceptEvent(req, Object.fromEntries(url.searchParams), res);
           }
           return;
         }
 
         if (url.pathname === '/api/state') {
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ ...last, received }));
+          prune();
+          json(res, 200, { agents: [...agents.values()], received });
           return;
         }
 
@@ -116,7 +146,10 @@ export function eventsPlugin(): Plugin {
           res.setHeader('Content-Type', 'text/event-stream');
           res.setHeader('Cache-Control', 'no-cache');
           res.setHeader('Connection', 'keep-alive');
-          res.write(`data: ${JSON.stringify({ ...last, received })}\n\n`);
+          prune();
+          for (const event of agents.values()) {
+            res.write(`data: ${JSON.stringify({ ...event, received })}\n\n`);
+          }
           subscribers.add(res);
           const keepAlive = setInterval(() => res.write(': ping\n\n'), 25_000);
           req.on('close', () => {

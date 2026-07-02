@@ -1,4 +1,4 @@
-import { isAgentState, type AgentEvent } from '../types';
+import { isAgentState, sanitizeAgentId, type AgentEvent } from '../types';
 import { demoStepAt } from './demo';
 
 export interface EventSourceOptions {
@@ -7,6 +7,7 @@ export interface EventSourceOptions {
 
 const DEMO_START_DELAY_MS = 6_000;
 const DEMO_TICK_MS = 500;
+const DEMO_AGENT = 'demo';
 
 /**
  * SSE で実イベントを購読しつつ、しばらく何も来なければデモを流す。
@@ -40,7 +41,10 @@ export function connectEvents({ onEvent }: EventSourceOptions): void {
       const step = demoStepAt(elapsed);
       if (step.state !== lastDemoState) {
         lastDemoState = step.state;
-        onEvent({ state: step.state, detail: step.detail, at: Date.now() }, 'demo');
+        onEvent(
+          { agent: DEMO_AGENT, state: step.state, detail: step.detail, at: Date.now() },
+          'demo',
+        );
       }
     }, DEMO_TICK_MS);
   }
@@ -54,14 +58,16 @@ export function connectEvents({ onEvent }: EventSourceOptions): void {
       } catch {
         return;
       }
-      const { state, detail, at, received } = payload as {
+      const { agent, state, detail, at, received } = payload as {
+        agent?: unknown;
         state?: unknown;
         detail?: unknown;
         at?: unknown;
         received?: unknown;
       };
       if (!isAgentState(state)) return;
-      // received=false は「サーバー既定の idle」なので実イベント扱いしない
+      // received=false のイベントは存在しない(サーバーは実イベントのみ保持)が、
+      // 念のためフラグで判定してデモ抑止に使う
       if (received === true) {
         liveReceived = true;
         stopDemo();
@@ -69,6 +75,7 @@ export function connectEvents({ onEvent }: EventSourceOptions): void {
       if (liveReceived) {
         onEvent(
           {
+            agent: sanitizeAgentId(agent),
             state,
             detail: typeof detail === 'string' ? detail : undefined,
             at: typeof at === 'number' ? at : Date.now(),
