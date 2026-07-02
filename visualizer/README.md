@@ -100,6 +100,62 @@ node visualizer/scripts/wrap.mjs -- npm test
 同じ LAN 内なら、トンネルの代わりに `npm run dev -- --host` で LAN に公開し、
 `DIORAMA_URL=http://<あなたのIP>:5199` を指定するだけでも届きます。
 
+## Cursor Cloud Agent で自動連携（初回設定）
+
+**できます。** リポジトリに `.cursor/hooks.json` が入っており、Cloud Agent が
+ファイルを読む・編集する・シェルを実行する・サブエージェントを動かすたびに、
+自動でジオラマへ状態が送られます。手動の `npm run send` は不要です。
+
+### 一度だけやること
+
+**1. 手元 PC — visualizer を常時起動**
+
+```bash
+cd visualizer
+DIORAMA_TOKEN=あなたの合言葉 npm run dev
+# 別ターミナル
+cloudflared tunnel --url http://localhost:5199
+# → https://xxxx.trycloudflare.com を控える
+```
+
+**2. Cursor Dashboard → Cloud Agent → Secrets**
+
+| Secret | 値 |
+|---|---|
+| `DIORAMA_URL` | `https://xxxx.trycloudflare.com` |
+| `DIORAMA_TOKEN` | `あなたの合言葉`（サーバー側と同じ） |
+| `DIORAMA_AGENT` | `cloud` など（HUD に出る名前） |
+
+**3. ブラウザで見守る**
+
+http://localhost:5199/?demo=0
+
+ここまで終われば、以後 Cursor 上で Cloud Agent を走らせるだけで
+手元の店内が勝手に動きます。
+
+### 自動で送られるタイミング
+
+| Cloud Agent の動き | ジオラマの状態 |
+|---|---|
+| ファイルを読む | `reading` |
+| ファイルを編集 | `coding` |
+| `npm test` / build / lint など | `testing` → 終了後 `done` or `error` |
+| ツール失敗 | `error` |
+| サブエージェント開始 | `thinking`（別店員 `sub-explore` など） |
+| サブエージェント終了 | `done` / `error` / `idle` |
+
+フックの実体は `.cursor/hooks/diorama.sh` → `visualizer/scripts/hook-bridge.mjs` です。
+`DIORAMA_AUTO=0` を Secrets に入れると自動送信を止められます。
+
+### ローカル IDE の Agent でも動く
+
+Secrets 不要です。`npm run dev` だけ起動していれば、
+同じ hooks が localhost:5199 に送ります。動作確認:
+
+```bash
+cd visualizer && npm run hook-test
+```
+
 ## コマンドを包む(半自動連携)
 
 テストやビルドを `testing → done / error` で自動的に包めます。
