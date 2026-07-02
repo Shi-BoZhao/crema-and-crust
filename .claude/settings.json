@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for f in ../agents-share/AGENTS.md ../agents-share/MEMORY.md \"../agents-share/projects/$(basename \"$PWD\").md\"; do if [ -f \"$f\" ]; then echo \"=== $f ===\"; cat \"$f\"; echo; fi; done; exit 0'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh .claude/hooks/check-unpushed.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
