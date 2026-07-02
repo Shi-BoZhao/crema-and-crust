@@ -22,6 +22,18 @@ npm run dev
 
 進み具合はブラウザ (localStorage) に自動保存されます。
 
+## おまけ: エージェント可視化ジオラマ
+
+`visualizer/` に、Cursor で AI エージェントが作業している様子を
+ドット絵風 3D の店内として眺められるビジュアライザーがあります(独立プロジェクト)。
+
+```bash
+cd visualizer && npm install && npm run dev
+```
+
+詳しくは [`visualizer/README.md`](visualizer/README.md) と
+[`docs/visualizer.md`](docs/visualizer.md) を参照。
+
 ## 開発
 
 ```bash

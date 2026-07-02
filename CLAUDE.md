@@ -15,6 +15,7 @@ crema-and-crust — 「個人経営の小さなピッツェリア兼エスプレ
 | `src/data/` | ゲーム内データ・日本語文言 |
 | `src/scenes/` | 画面コンポーネント |
 | `src/state/` | GameState / reducer / localStorage 永続化 |
+| `visualizer/` | エージェント可視化ジオラマ(独立した npm プロジェクト。設計は `docs/visualizer.md`) |
 | `.cursor/rules/` | Cursor 向けプロジェクトルール |
 | `.claude/skills/` | このプロジェクト固有の skills(`add-content` など) |
 | `.claude/agents/` | このプロジェクト固有の subagents(`cozy-reviewer` など) |
