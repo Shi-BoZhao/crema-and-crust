@@ -4,3 +4,4 @@ node_modules/
 dist/
 *.tsbuildinfo
 .diorama-token
+.diorama.config.json

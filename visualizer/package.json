@@ -13,6 +13,7 @@
     "live-demo": "node scripts/live-demo.mjs",
     "hook-test": "node scripts/hook-test.mjs",
     "up": "node scripts/up.mjs",
+    "serve": "node server/standalone.mjs",
     "install-hooks": "node scripts/install-hooks.mjs"
   },
   "dependencies": {

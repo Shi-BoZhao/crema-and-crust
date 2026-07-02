@@ -151,8 +151,86 @@ Secrets に貼る値がターミナルに表示されます。
 
 **注意**: 無料のクイックトンネルは起動のたびに URL が変わります。
 `npm run up` し直したら Secrets の `DIORAMA_URL` も更新してください。
-URL を固定したい場合は Cloudflare Named Tunnel や ngrok の固定ドメインを使えば、
-Secrets の設定は一度きりで済みます。
+下の「URL を固定する」を設定すれば、Secrets は一度きりで済みます。
+
+## URL を固定する(Named Tunnel / ngrok)
+
+`visualizer/.diorama.config.json`(gitignore 済み)を一度つくると、
+`npm run up` が毎回同じ URL でトンネルを張るようになります。
+
+### 方法 A: Cloudflare Named Tunnel(独自ドメインを持っている場合)
+
+```bash
+cloudflared tunnel login                       # ブラウザで Cloudflare にログイン
+cloudflared tunnel create crema-diorama        # トンネル作成(一度だけ)
+cloudflared tunnel route dns crema-diorama diorama.あなたのドメイン.com
+```
+
+`.diorama.config.json`:
+
+```json
+{
+  "tunnelCommand": "cloudflared tunnel run --url http://localhost:5199 crema-diorama",
+  "publicUrl": "https://diorama.あなたのドメイン.com"
+}
+```
+
+### 方法 B: ngrok の固定ドメイン(ドメイン不要・無料枠あり)
+
+[ngrok のダッシュボード](https://dashboard.ngrok.com/)で無料の固定ドメイン
+(`xxx.ngrok-free.app`)を1つ取得して:
+
+```bash
+brew install ngrok
+ngrok config add-authtoken あなたのトークン
+```
+
+`.diorama.config.json`:
+
+```json
+{
+  "tunnelCommand": "ngrok http --domain=xxx.ngrok-free.app 5199",
+  "publicUrl": "https://xxx.ngrok-free.app"
+}
+```
+
+どちらも設定後は `npm run up` だけで固定 URL が使われ、
+**Cursor Secrets の `DIORAMA_URL` は一度設定すれば更新不要**になります。
+
+## Cursor の中だけで完結させる
+
+### 見る場所を Cursor にする
+
+ジオラマは普通の Web ページなので、**Cursor 内蔵のブラウザタブ**で
+`DIORAMA_URL`(または http://localhost:5199/?demo=0)を開けば、
+エディタの中で見守れます。コマンドパレット(⌘⇧P)で「Browser」を検索するか、
+Cursor のブラウザパネルに URL を貼るだけです。
+
+### Mac で何も起動したくない場合(常設ホスティング)
+
+visualizer は Vite なしの単体サーバーとしても動きます。
+これをどこかに常設すれば、**手元で `npm run up` を起動する必要すらなくなり**、
+Cursor 内蔵ブラウザで固定 URL を開くだけになります。
+
+```bash
+# 任意のサーバー / PaaS (Fly.io, Railway, Render, VPS など) で
+npm ci && npm run build
+DIORAMA_TOKEN=合言葉 PORT=5199 node server/standalone.mjs
+```
+
+Docker でも動きます(`visualizer/Dockerfile` 同梱):
+
+```bash
+docker build -t crema-diorama visualizer/
+docker run -p 5199:5199 -e DIORAMA_TOKEN=合言葉 crema-diorama
+```
+
+デプロイ先の URL を Cursor Secrets の `DIORAMA_URL` に一度設定すれば、
+以後は **Cursor で Cloud Agent を走らせ、Cursor 内蔵ブラウザで眺めるだけ**。
+ローカルのプロセスはゼロです。
+
+> 状態はメモリ保持(再起動でリセット)ですが、ジオラマは「いまの気配」を
+> 眺めるものなので、永続化は不要という設計です。
 
 ### 自動で送られるタイミング
 

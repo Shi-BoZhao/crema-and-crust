@@ -49,7 +49,7 @@ Cursor hooks / 手動 ──POST──▶       ├─ events-plugin (POST /api/
 | 描画 | Three.js(素の TypeScript) | React 不要の常時アニメーション。ジオメトリはすべてコード生成で外部アセット無し |
 | ドット絵化 | 低解像度レンダリング + `image-rendering: pixelated` | シェーダ不要で確実にドット感が出る、いちばん単純な方法 |
 | カメラ | OrthographicCamera(アイソメ風固定) | ジオラマ感。パースが付かないのでドット絵と相性がよい |
-| イベント取得 | Vite プラグイン内蔵の HTTP + SSE | プロセス1つ・`npm run dev` 一発。WebSocket より単純で再接続も EventSource 任せ |
+| イベント取得 | HTTP + SSE (`server/api.mjs`) | WebSocket より単純で再接続も EventSource 任せ。開発時は Vite プラグイン、常設時はスタンドアロンサーバーが同じ API を配信 |
 | テスト | Vitest(イベント解釈・状態遷移の純関数のみ) | 見た目はスクリーンショットで確認し、ロジックだけ自動テスト |
 
 ### イベント仕様
@@ -124,8 +124,16 @@ Cloud Agent VM (任意のリポジトリ)        あなたの PC
 2. Cursor Dashboard → Cloud Agent Secrets: 表示された `DIORAMA_URL` / `DIORAMA_TOKEN`
 
 以後、Cloud Agent セッションごとに手動送信は不要。`DIORAMA_AUTO=0` で無効化可能。
-クイックトンネルの URL は起動ごとに変わる。固定したければ Cloudflare Named Tunnel
-か ngrok 固定ドメインで `DIORAMA_URL` を一度だけ設定する。
+
+**URL の固定**: `visualizer/.diorama.config.json` に `tunnelCommand` と `publicUrl` を
+書くと、`npm run up` が固定トンネル(Cloudflare Named Tunnel / ngrok 固定ドメイン)を
+使う。Secrets の `DIORAMA_URL` は一度設定すれば更新不要になる。
+
+**常設ホスティング**: `server/standalone.mjs` は Vite 不要の単体サーバー
+(dist 配信 + イベント API、`npm run serve`)。Fly.io / Railway / VPS / Docker
+(`visualizer/Dockerfile`)に常設すれば、手元のプロセスはゼロになり、
+Cursor 内蔵ブラウザで固定 URL を開くだけで見守れる。
+API 実体は `server/api.mjs` に一本化し、Vite プラグインと共有している。
 
 **他リポジトリへの展開**
 
