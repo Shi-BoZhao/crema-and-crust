@@ -10,7 +10,8 @@
     "test": "vitest run",
     "send": "node scripts/send-event.mjs",
     "wrap": "node scripts/wrap.mjs",
-    "live-demo": "node scripts/live-demo.mjs"
+    "live-demo": "node scripts/live-demo.mjs",
+    "hook-test": "node scripts/hook-test.mjs"
   },
   "dependencies": {
     "three": "^0.177.0"
