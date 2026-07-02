@@ -6,7 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { sendEvent } from './lib/send.mjs';
 
-const bridge = join(dirname(fileURLToPath(import.meta.url)), 'hook-bridge.mjs');
+const bridge = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '.cursor',
+  'hooks',
+  'diorama-bridge.mjs',
+);
 
 const samples = [
   { hook_event_name: 'beforeReadFile', file_path: '/workspace/src/game/pizza.ts' },

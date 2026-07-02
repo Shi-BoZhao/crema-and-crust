@@ -11,7 +11,9 @@
     "send": "node scripts/send-event.mjs",
     "wrap": "node scripts/wrap.mjs",
     "live-demo": "node scripts/live-demo.mjs",
-    "hook-test": "node scripts/hook-test.mjs"
+    "hook-test": "node scripts/hook-test.mjs",
+    "up": "node scripts/up.mjs",
+    "install-hooks": "node scripts/install-hooks.mjs"
   },
   "dependencies": {
     "three": "^0.177.0"

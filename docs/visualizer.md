@@ -107,22 +107,36 @@ Content-Type: application/json
 ### Cloud Agent 自動連携の構成
 
 ```
-Cloud Agent VM                          あなたの PC
+Cloud Agent VM (任意のリポジトリ)        あなたの PC
 ──────────────                          ─────────────────────────
 .cursor/hooks.json が起動
   ↓ ファイル読取/編集/シェル/サブエージェント
-hook-bridge.mjs ──POST──▶ DIORAMA_URL ──▶ cloudflared 等
-  (Secrets: URL/TOKEN/AGENT)                  └─▶ visualizer (localhost:5199)
-                                                    └─▶ ブラウザの店内
+.cursor/hooks/diorama-bridge.mjs         npm run up で一括起動
+  ──POST──▶ DIORAMA_URL ──────────▶ cloudflared トンネル
+  (Secrets: URL/TOKEN)                       └─▶ visualizer (localhost:5199)
+                                                   └─▶ ブラウザの店内
 ```
 
-**初回設定(3ステップ)**
+**初回設定**
 
-1. 手元: `DIORAMA_TOKEN=... npm run dev` + `cloudflared tunnel --url http://localhost:5199`
-2. Cursor Dashboard → Cloud Agent Secrets: `DIORAMA_URL`, `DIORAMA_TOKEN`, `DIORAMA_AGENT`
-3. ブラウザ: `http://localhost:5199/?demo=0`
+1. 手元: `npm run up`(visualizer + cloudflared + ブラウザをまとめて起動し、
+   Secrets に貼る値を表示する。トークンは `.diorama-token` に自動生成・保存)
+2. Cursor Dashboard → Cloud Agent Secrets: 表示された `DIORAMA_URL` / `DIORAMA_TOKEN`
 
 以後、Cloud Agent セッションごとに手動送信は不要。`DIORAMA_AUTO=0` で無効化可能。
+クイックトンネルの URL は起動ごとに変わる。固定したければ Cloudflare Named Tunnel
+か ngrok 固定ドメインで `DIORAMA_URL` を一度だけ設定する。
+
+**他リポジトリへの展開**
+
+`npm run install-hooks -- <repo>` で、任意のリポジトリに
+`.cursor/hooks.json` + `.cursor/hooks/diorama-bridge.mjs`(依存なし単一ファイル)を
+インストールできる。対象リポジトリに visualizer は不要で、push すれば
+Cloud Agent からも有効になる。既存の hooks.json には diorama 項目だけ追記し、
+再実行しても重複しない。
+
+agent 名は `DIORAMA_AGENT` → `package.json` の name → フォルダ名の順で決まるため、
+複数リポジトリの Agent が同じ店に別々の店員として現れる。
 
 | Hook イベント | ジオラマ状態 |
 |---|---|

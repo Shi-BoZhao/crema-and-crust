@@ -11,10 +11,23 @@ Cursor で AI エージェントが作業している様子を、ドット絵風
 
 ## 起動
 
+### ワンコマンド起動(おすすめ)
+
 ```bash
 cd visualizer
-npm install
-npm run dev
+npm install        # 初回だけ
+npm run up
+```
+
+これだけで **visualizer + トンネル(cloudflared があれば) + ブラウザ** が立ち上がり、
+Cursor Secrets に貼る値がターミナルに表示されます。
+合言葉(トークン)は初回に自動生成され、`.diorama-token` に保存されます。
+止めるときは Ctrl+C。
+
+### 手動起動
+
+```bash
+npm run dev        # localhost:5199 のみ(トンネルなし)
 ```
 
 ブラウザで http://localhost:5199 を開くと店内が表示されます。
@@ -108,30 +121,38 @@ node visualizer/scripts/wrap.mjs -- npm test
 
 ### 一度だけやること
 
-**1. 手元 PC — visualizer を常時起動**
+**1. 手元 PC — ワンコマンド起動**
 
 ```bash
 cd visualizer
-DIORAMA_TOKEN=あなたの合言葉 npm run dev
-# 別ターミナル
-cloudflared tunnel --url http://localhost:5199
-# → https://xxxx.trycloudflare.com を控える
+npm run up
 ```
+
+visualizer・トンネル・ブラウザがまとめて立ち上がり、
+Secrets に貼る値がターミナルに表示されます。
+(cloudflared 未導入なら `brew install cloudflared` してから)
 
 **2. Cursor Dashboard → Cloud Agent → Secrets**
 
+ターミナルに表示された値をそのまま貼ります。
+
 | Secret | 値 |
 |---|---|
-| `DIORAMA_URL` | `https://xxxx.trycloudflare.com` |
-| `DIORAMA_TOKEN` | `あなたの合言葉`（サーバー側と同じ） |
-| `DIORAMA_AGENT` | `cloud` など（HUD に出る名前） |
+| `DIORAMA_URL` | 表示された `https://xxxx.trycloudflare.com` |
+| `DIORAMA_TOKEN` | 表示された合言葉 |
+| `DIORAMA_AGENT` | 省略可(未設定ならリポジトリ名が店員の名前になる) |
 
 **3. ブラウザで見守る**
 
-http://localhost:5199/?demo=0
+`npm run up` が自動で開きます(http://localhost:5199/?demo=0)。
 
 ここまで終われば、以後 Cursor 上で Cloud Agent を走らせるだけで
 手元の店内が勝手に動きます。
+
+**注意**: 無料のクイックトンネルは起動のたびに URL が変わります。
+`npm run up` し直したら Secrets の `DIORAMA_URL` も更新してください。
+URL を固定したい場合は Cloudflare Named Tunnel や ngrok の固定ドメインを使えば、
+Secrets の設定は一度きりで済みます。
 
 ### 自動で送られるタイミング
 
@@ -144,7 +165,7 @@ http://localhost:5199/?demo=0
 | サブエージェント開始 | `thinking`（別店員 `sub-explore` など） |
 | サブエージェント終了 | `done` / `error` / `idle` |
 
-フックの実体は `.cursor/hooks/diorama.sh` → `visualizer/scripts/hook-bridge.mjs` です。
+フックの実体は `.cursor/hooks/diorama-bridge.mjs`(依存なしの単一ファイル)です。
 `DIORAMA_AUTO=0` を Secrets に入れると自動送信を止められます。
 
 ### ローカル IDE の Agent でも動く
@@ -155,6 +176,31 @@ Secrets 不要です。`npm run dev` だけ起動していれば、
 ```bash
 cd visualizer && npm run hook-test
 ```
+
+## 他のリポジトリでも使う
+
+自動連携はこのリポジトリ専用ではありません。
+**どのリポジトリにも1コマンドでインストール**できます。
+
+```bash
+cd visualizer
+npm run install-hooks -- ~/path/to/other-repo
+```
+
+これで対象リポジトリに `.cursor/hooks.json` と
+`.cursor/hooks/diorama-bridge.mjs`(単一ファイル・依存なし)がコピーされます。
+対象リポジトリに visualizer を入れる必要はありません。
+
+そのあと:
+
+1. 対象リポジトリで **commit & push** する
+   (Cloud Agent は push されたブランチの hooks を読むため)
+2. Secrets(`DIORAMA_URL` / `DIORAMA_TOKEN`)は**そのまま共通で使えます**
+3. 店員の名前は `DIORAMA_AGENT` 未設定なら**リポジトリ名から自動で決まる**ので、
+   複数リポジトリの Agent が同じ店に別々の店員として現れます
+
+既に hooks.json があるリポジトリでも、diorama の項目だけ安全に追記します
+(2回実行しても重複しません)。
 
 ## コマンドを包む(半自動連携)
 
