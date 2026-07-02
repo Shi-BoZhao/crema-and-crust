@@ -22,6 +22,8 @@ export function ServeScene({ onBack }: ServeSceneProps) {
   const [response, setResponse] = useState<string | null>(null);
   const [unlockNotices, setUnlockNotices] = useState<string[]>([]);
   const [served, setServed] = useState(false);
+  // 提供すると state 上の customer は消えるので、表示用に名前を残しておく
+  const [servedName, setServedName] = useState<string | null>(null);
 
   const customerDef = customer.id
     ? CUSTOMERS.find((c) => c.id === customer.id)
@@ -36,6 +38,7 @@ export function ServeScene({ onBack }: ServeSceneProps) {
     const matched = matchesMood(item, customer.mood);
     const text = selectResponse(customer.id, customer.mood, matched);
     setResponse(text);
+    setServedName(customerDef?.name ?? "お客さん");
 
     const prevCount = cardCount;
     dispatch({ type: "SERVE_CUSTOMER" });
@@ -47,7 +50,8 @@ export function ServeScene({ onBack }: ServeSceneProps) {
     }
   };
 
-  if (!customer.id) {
+  // 提供後は customer が消えるが、反応表示のため served 中は早期リターンしない
+  if (!customer.id && !served) {
     return (
       <SceneLayout title="提供" onBack={onBack}>
         <p className="hint">いまはお客さんがいないみたい〜</p>
@@ -65,15 +69,15 @@ export function ServeScene({ onBack }: ServeSceneProps) {
           <circle cx="30" cy="22" r="14" fill="#e8c4a0" />
           <ellipse cx="30" cy="58" rx="18" ry="22" fill="#5a7d68" />
         </svg>
-        <p>{customerDef?.name ?? "お客さん"}</p>
-        {customer.arrivalMessage && (
+        <p>{customerDef?.name ?? servedName ?? "お客さん"}</p>
+        {!served && customer.arrivalMessage && (
           <p className="hint">「{customer.arrivalMessage}」</p>
         )}
       </div>
 
       {!served ? (
         <>
-          <p className="hint">ノートから、出したいものを選んでください〜</p>
+          <p className="hint">ノートから、出したいものをどうぞ〜</p>
           {recentItems.length === 0 ? (
             <p className="hint">まだノートに何もないみたい… 先に作ってみましょう〜</p>
           ) : (

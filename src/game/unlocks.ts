@@ -37,8 +37,5 @@ export function getNewlyUnlocked(
   return getUnlockedIds(cardCount).filter((id) => !prev.has(id));
 }
 
-/** 解放に必要な次の閾値を返す (全解放済みなら null) */
-export function getNextUnlockThreshold(cardCount: number): number | null {
-  const next = UNLOCK_TABLE.find((entry) => entry.threshold > cardCount);
-  return next?.threshold ?? null;
-}
+// 「あと◯枚で解放」のような表示はやらないことリストに含まれるため、
+// 次の閾値を返す関数は意図的に提供しない (docs/game-design.md)。

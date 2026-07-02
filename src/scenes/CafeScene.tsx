@@ -8,16 +8,16 @@ import {
 } from "../game/customers";
 import { CUSTOMERS } from "../data/customers";
 import { TIME_OF_DAY_LABEL } from "../game/time";
-import { useTimeOfDay } from "../hooks/useTimeOfDay";
+import type { TimeOfDay } from "../game/types";
 import { SpeechBubble } from "../components/SpeechBubble";
 
 interface CafeSceneProps {
   onNavigate: (scene: SceneId) => void;
+  timeOfDay: TimeOfDay;
 }
 
-export function CafeScene({ onNavigate }: CafeSceneProps) {
+export function CafeScene({ onNavigate, timeOfDay }: CafeSceneProps) {
   const { state, dispatch } = useGame();
-  const timeOfDay = useTimeOfDay();
   const { customer } = state;
 
   useEffect(() => {
@@ -198,6 +198,8 @@ export function CafeScene({ onNavigate }: CafeSceneProps) {
           transform: translateX(-50%);
           margin-bottom: 0.5rem;
           white-space: normal;
+          width: max-content;
+          max-width: min(260px, 78vw);
         }
         .cafe-counter-empty {
           text-align: center;

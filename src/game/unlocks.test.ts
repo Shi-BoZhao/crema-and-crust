@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getUnlockedIds, getNewlyUnlocked, getNextUnlockThreshold } from "./unlocks";
+import { getUnlockedIds, getNewlyUnlocked } from "./unlocks";
 
 // ─── getUnlockedIds ───────────────────────────────────────
 
@@ -87,22 +87,5 @@ describe("getNewlyUnlocked", () => {
 
   it("全解放済みからさらにカードが増えても空配列", () => {
     expect(getNewlyUnlocked(15, 20)).toHaveLength(0);
-  });
-});
-
-// ─── getNextUnlockThreshold ──────────────────────────────
-
-describe("getNextUnlockThreshold", () => {
-  it("0 枚 → 次の閾値は 2", () => {
-    expect(getNextUnlockThreshold(0)).toBe(2);
-  });
-
-  it("2 枚 → 次の閾値は 4", () => {
-    expect(getNextUnlockThreshold(2)).toBe(4);
-  });
-
-  it("15 枚以上 → null (全解放済み)", () => {
-    expect(getNextUnlockThreshold(15)).toBeNull();
-    expect(getNextUnlockThreshold(100)).toBeNull();
   });
 });

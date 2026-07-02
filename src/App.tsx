@@ -14,7 +14,9 @@ export function App() {
 
   return (
     <div className="app-shell" data-time={timeOfDay}>
-      {scene === "cafe" && <CafeScene onNavigate={setScene} />}
+      {scene === "cafe" && (
+        <CafeScene onNavigate={setScene} timeOfDay={timeOfDay} />
+      )}
       {scene === "pizza" && (
         <PizzaScene onBack={() => setScene("cafe")} />
       )}
