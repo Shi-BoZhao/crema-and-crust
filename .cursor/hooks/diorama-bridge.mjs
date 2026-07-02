@@ -52,6 +52,10 @@ async function sendEvent(agent, state, detail) {
   ).replace(/\/$/, '');
 
   const headers = { 'Content-Type': 'application/json' };
+  // ngrok 無料枠はこのヘッダがないと HTML の警告ページが返り、API に届かない
+  if (/ngrok/i.test(base)) {
+    headers['ngrok-skip-browser-warning'] = '1';
+  }
   if (process.env.DIORAMA_TOKEN) {
     headers.Authorization = `Bearer ${process.env.DIORAMA_TOKEN}`;
   }

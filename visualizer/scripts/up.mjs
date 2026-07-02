@@ -147,8 +147,13 @@ if (tunnelCommand) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   children.push(tunnel);
+  tunnel.stdout.on('data', (chunk) => process.stderr.write(chunk));
+  tunnel.stderr.on('data', (chunk) => process.stderr.write(chunk));
   tunnel.on('exit', (code) => {
-    console.error(`トンネルが終了しました (exit ${code})`);
+    if (code !== 0) {
+      console.error(`\nトンネルが終了しました (exit ${code})。上の ngrok/cloudflared のエラーを確認してください。`);
+      console.error('  ローカルだけ動いていても、Cloud Agent からは届きません。\n');
+    }
   });
   printSecrets(publicUrl ?? '(publicUrl 未設定: .diorama.config.json に追記してください)', {
     fixed: Boolean(publicUrl),
