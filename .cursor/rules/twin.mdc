@@ -1,0 +1,43 @@
+---
+description: デジタルツイン(gemini repo)への観測記録。全セッション常時適用。
+alwaysApply: true
+---
+
+# ツイン観測の記録(twin-capture 相当)
+
+ユーザー(Shi-BoZhao)は自身のデジタルツインを gemini repo で運用している。
+このプロジェクトでの作業中も、以下のとおり観測を記録する。
+(正は agents-share/.claude/skills/twin-capture(Claude 用)。両者を揃えて更新する)
+
+## 記録の対象と書式
+
+- 対象: 今後も残る本人の嗜好・価値観・判断パターン・目標の変化。
+  一時的な気分・その場限りの事情は対象外。センシティブ領域(健康・家族・
+  人間関係・政治・宗教・金銭の詳細)は本人の明示指示がある場合のみ・⚠ 付き。
+- 書式(1観測1エントリ。gemini/observations/README.md と同一):
+
+  ```
+  ### YYYY-MM-DD [タグ] source: cursor/{プロジェクト名}
+  本文(1〜3行)
+  確度: ○
+  ```
+
+  タグ: identity / values / preference / thinking / voice / goals / episode / correction
+
+## 書き込み先(上から順に試す)
+
+1. `../gemini` がある → `../gemini/observations/inbox.md` に追記し、
+   gemini 側で commit・push(main へ直接)
+2. `../agents-share` がある → `../agents-share/notes/twin-inbox.md` に追記し、
+   agents-share 側で commit・push(main へ直接)
+3. どちらも無い → 記録できない旨を伝え、エントリ全文をチャットに出力して
+   本人が Claude アプリ等から記録できるようにする
+
+## いつ記録するか
+
+- 「記録:」で始まるメッセージ → 内容を観測1件として即記録し、
+  「記録しました」とだけ短く返す(深掘りの質問はしない)。
+- 「これツインに記録して」と言われたとき → 同上。
+- 作業中に本人の識別力の高い嗜好・判断が現れたとき → 区切りのよいタイミングで
+  「ツインに記録しますか?」と1行で提案する(勝手には書かない。1セッション数件まで)。
+- 大きな作業の締めくくり時 → このセッションに記録すべき観測が無かったか一度だけ確認する。
