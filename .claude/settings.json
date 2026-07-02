@@ -16,6 +16,10 @@
           {
             "type": "command",
             "command": "sh .claude/hooks/check-unpushed.sh"
+          },
+          {
+            "type": "command",
+            "command": "sh .claude/hooks/twin-observation-check.sh"
           }
         ]
       }
